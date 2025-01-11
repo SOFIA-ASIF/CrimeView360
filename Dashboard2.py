@@ -126,7 +126,7 @@ elif selected == "Crime Insights":
             daywise_crime = may_data.groupby(may_data['date'].dt.day).size()
 
         fig4, ax4 = plt.subplots(figsize=(6, 5))  # Adjust size
-        ax4.plot(daywise_crime.index, daywise_crime.values, marker='o', color='blue')
+        ax4.plot(daywise_crime.index, daywise_crime.values, marker='o', color='green')
         ax4.set_title("Day-wise Crime Rates in May", fontsize=14, fontweight='bold') 
         ax4.set_xlabel("Day of the Month", fontsize=12)
         ax4.set_ylabel("Number of Crimes", fontsize=12)
@@ -263,7 +263,7 @@ elif selected == "Crime Location Analysis":
         fig.patch.set_facecolor('#F1F8ED')  # Figure background color
         ax.set_facecolor('#F1F8ED')  # Axis background color
 
-        ax.bar(location_crime_data['crime_type'], location_crime_data['count'], color='darkred')
+        ax.bar(location_crime_data['crime_type'], location_crime_data['count'], color=('#6c5ce7','#7A288A','#C9C3E3'))
         ax.set_title(f"Crimes in {selected_location}", fontsize=16, fontweight='bold')
         ax.set_xlabel("Crime Type", fontsize=14)
         ax.set_ylabel("Number of Crimes", fontsize=14)
@@ -273,9 +273,6 @@ elif selected == "Crime Location Analysis":
         st.write(f"No crime data available for the location: {selected_location}.")
 
 # Add "FAQs" to Sidebar Navigation
-
-
-# FAQ Page
 if selected == "FAQs":
     st.title("Frequently Asked Questions")
     st.write("Select a question from the dropdown to view the answer.")
@@ -283,8 +280,8 @@ if selected == "FAQs":
     # Dropdown for FAQs
     faqs = [
         "What are the most common crime types in each district?",
-        "What is the average number of incidents per community area for each crime type?",
-        "What is the distribution of incidents across different years for each crime type?"
+        "What is the distribution of crime incidents by time of day?",
+        "What is the distribution of incidents across different weeks for each crime type?"
     ]
     selected_question = st.selectbox("Select a Question:", faqs)
 
@@ -323,46 +320,43 @@ if selected == "FAQs":
         st.subheader("Most Common Crime Types in Each District")
         st.dataframe(result)
 
-    elif selected_question == "What is the average number of incidents per community area for each crime type?":
+    elif selected_question == "What is the distribution of crime incidents by time of day?":
         query = """
         SELECT 
-            c.Type,
-            l.Community_area,
-            COUNT(DISTINCT i.ID) AS TotalIncidents,
-            COUNT(DISTINCT l.ID) AS TotalCommunityAreas,
-            CAST(COUNT(DISTINCT i.ID) AS REAL) / COUNT(DISTINCT l.ID) AS AvgIncidentsPerCommunityArea
+            HOUR(STR_TO_DATE(i.Date, '%m/%d/%Y %H:%i')) AS HourOfDay,
+            COUNT(*) AS TotalIncidents
         FROM Incident AS i
-        JOIN Location AS l ON i.Location_ID = l.ID
-        JOIN Crime AS c ON i.Crime_ID = c.ID
-        GROUP BY 
-            c.Type,
-            l.Community_area
-        ORDER BY 
-            c.Type,
-            AvgIncidentsPerCommunityArea DESC;
+        WHERE i.Date IS NOT NULL
+        GROUP BY HourOfDay
+        ORDER BY HourOfDay;
         """
         result = pd.read_sql(query, engine)
-        st.subheader("Average Number of Incidents Per Community Area for Each Crime Type")
+        st.subheader("Distribution of Crime Incidents by Time of Day")
         st.dataframe(result)
 
-    elif selected_question == "What is the distribution of incidents across different years for each crime type?":
+    elif selected_question == "What is the distribution of incidents across different weeks for each crime type?":
         query = """
         SELECT
-            i.Year,
+            MONTHNAME(STR_TO_DATE(i.Date, '%m/%d/%Y %H:%i')) AS MonthName,
+            WEEK(STR_TO_DATE(i.Date, '%m/%d/%Y %H:%i')) - WEEK(DATE_SUB(STR_TO_DATE(i.Date, '%m/%d/%Y %H:%i'), INTERVAL DAYOFMONTH(STR_TO_DATE(i.Date, '%m/%d/%Y %H:%i')) - 1 DAY)) + 1 AS WeekOfMonth,
             c.Type,
             COUNT(*) AS TotalIncidents
         FROM Incident AS i
         JOIN Crime AS c ON i.Crime_ID = c.ID
+        WHERE i.Date IS NOT NULL
         GROUP BY
-            i.Year,
+            MonthName,
+            WeekOfMonth,
             c.Type
         ORDER BY
-            i.Year,
+            MonthName,
+            WeekOfMonth,
             c.Type;
         """
         result = pd.read_sql(query, engine)
-        st.subheader("Distribution of Incidents Across Different Years for Each Crime Type")
+        st.subheader("Distribution of Incidents Across Different Weeks for Each Crime Type")
         st.dataframe(result)
+
 
 
 # Dispose of the engine connection
