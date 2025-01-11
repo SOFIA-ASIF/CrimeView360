@@ -1,17 +1,34 @@
 -- 1. What are the most common crime types in each district?
+WITH CrimeCounts AS (
+    SELECT 
+        l.District,
+        c.Type,
+        COUNT(*) AS TotalIncidents
+    FROM Incident AS i
+    JOIN Location AS l ON i.Location_ID = l.ID
+    JOIN Crime AS c ON i.Crime_ID = c.ID
+    GROUP BY 
+        l.District,
+        c.Type
+),
+MostCommonCrimes AS (
+    SELECT 
+        District,
+        Type,
+        TotalIncidents,
+        RANK() OVER (PARTITION BY District ORDER BY TotalIncidents DESC) AS Ranks
+    FROM CrimeCounts
+)
 SELECT 
-    l.District,
-    c.Type,
-    COUNT(*) AS TotalIncidents
-FROM Incident AS i
-JOIN Location AS l ON i.Location_ID = l.ID
-JOIN Crime AS c ON i.Crime_ID = c.ID
-GROUP BY 
-    l.District,
-    c.Type
+    District,
+    Type AS MostCommonCrime,
+    TotalIncidents
+FROM MostCommonCrimes
+WHERE Ranks = 1
 ORDER BY 
-    l.District,
-    TotalIncidents DESC;
+    (SELECT COUNT(*) FROM MostCommonCrimes WHERE Ranks = 1) DESC, -- Order by district count
+    District; -- Secondary order by district name
+
 
 -- 2. What is the average number of incidents per community area for each crime type?
 SELECT 
