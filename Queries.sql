@@ -47,16 +47,20 @@ ORDER BY
     c.Type,
     AvgIncidentsPerCommunityArea DESC;
 
--- 3. What is the distribution of incidents across different years for each crime type?
+-- 3. What is the distribution of incidents across different weeks for each crime type?
 SELECT
-    i.Year,
-    c.Type,
-    COUNT(*) AS TotalIncidents
-FROM Incident AS i
-JOIN Crime AS c ON i.Crime_ID = c.ID
-GROUP BY
-    i.Year,
-    c.Type
-ORDER BY
-    i.Year,
-    c.Type;
+            MONTHNAME(STR_TO_DATE(i.Date, '%m/%d/%Y %H:%i')) AS MonthName,
+            WEEK(STR_TO_DATE(i.Date, '%m/%d/%Y %H:%i')) - WEEK(DATE_SUB(STR_TO_DATE(i.Date, '%m/%d/%Y %H:%i'), INTERVAL DAYOFMONTH(STR_TO_DATE(i.Date, '%m/%d/%Y %H:%i')) - 1 DAY)) + 1 AS WeekOfMonth,
+            c.Type,
+            COUNT(*) AS TotalIncidents
+        FROM Incident AS i
+        JOIN Crime AS c ON i.Crime_ID = c.ID
+        WHERE i.Date IS NOT NULL
+        GROUP BY
+            MonthName,
+            WeekOfMonth,
+            c.Type
+        ORDER BY
+            MonthName,
+            WeekOfMonth,
+            c.Type;
